@@ -1,0 +1,16 @@
+Understand the eppy api. (2 weeks)
+    - What we need to put into it?
+        - step/action
+        - HVAC Templates
+        - Start with a simple / small zone - 1
+    - What we want to get out of it?
+        - state/reward
+    - What do we want to optimize?
+        - 
+
+Meet next week to determine a "Going forward"
+
+
+Starting point: https://github.com/NREL/EnergyPlus/tree/develop/testfiles/BasicsFiles
+Need to find documentation on all of the parameters of the .idf file.
+Need to figure out what the output from a .idf file will be.
