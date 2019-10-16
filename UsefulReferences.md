@@ -23,3 +23,14 @@ IBM researchers created an open source reinforcement learning "testbed" for Ener
     - Ubuntu 16.04.2 LTS, 18.04.2 LTS
 
 \* _Testbed_ (noun.) A piece of equipment used for testing new machinery, especially aircraft engines.
+
+
+## Input output reference
+
+Here is the link to [PDF](https://www.energyplus.net/sites/all/modules/custom/nrel_custom/pdfs/pdfs_v9.2.0/InputOutputReference.pdf)
+
+We will mostly be focusing on chapter 2 of the document (pg. 2355). We will be working with the HVAC templates. Chapter 2 goes through the values in the templates, for applicable values, the default is documented here
+
+
+## Eppy simple tutorial
+This [tutorial](https://eppy.readthedocs.io/en/latest/Main_Tutorial.html#modifying-idf-fields)  goes over the basics of using eppy to edit the .idf files. This will be a key part for our simulation. The agent will modify the state through the idf file with eppy.
