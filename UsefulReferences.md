@@ -34,3 +34,7 @@ We will mostly be focusing on chapter 2 of the document (pg. 2355). We will be w
 
 ## Eppy simple tutorial
 This [tutorial](https://eppy.readthedocs.io/en/latest/Main_Tutorial.html#modifying-idf-fields)  goes over the basics of using eppy to edit the .idf files. This will be a key part for our simulation. The agent will modify the state through the idf file with eppy.
+
+This [link](https://eppy.readthedocs.io/en/latest/runningeplus.html) talks about how to run an eppy simulation from a python source file
+
+
