@@ -1,5 +1,5 @@
 """
-Classic cart-pole system implemented by Rich Sutton et al.
+HVAC system following the classic cart-pole system implemented by Rich Sutton et al.
 Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 """
@@ -14,36 +14,40 @@ import numpy as np
 class HVACEnv(gym.Env):
     """
     Description:
-        A pole is attached by an un-actuated joint to a cart, which moves along a frictionless track. The pendulum starts upright, and the goal is to prevent it from falling over by increasing and reducing the cart's velocity.
+        A home with three rooms: A basement, an attic, and the surrounding air.
+        The basement is the lowest room. It touches the earth and the main floor.
+        The main floor is the middle room. It touches the basement, the attic, and the surrounding air.
+        The attic is upper room. It touches the main floor and the surrounding air.
 
     Source:
-        This environment corresponds to the version of the cart-pole problem described by Barto, Sutton, and Anderson
+        http://www.sharetechnote.com/html/DE_Modeling_Example_Cooling.html
 
     Observation:
-        Type: Box(4)
+        Type: Box(3)
         Num	Observation                 Min         Max
-        0	Cart Position             -4.8            4.8
-        1	Cart Velocity             -Inf            Inf
-        2	Pole Angle                 -24 deg        24 deg
-        3	Pole Velocity At Tip      -Inf            Inf
+        0	Temperature Basement        10          30
+        1	Temperature Main Floor      10          30
+        2	Temperature Attic           10          30
+
+    "30 is hot, 20 is pleasing, 10 is cold, 0 is freezing"
+    20 Celsius (68 F) is roughly room temperature, so 30 and 10 make convenient hot/cold thresholds
 
     Actions:
         Type: Discrete(2)
         Num	Action
-        0	Push cart to the left
-        1	Push cart to the right
-
-        Note: The amount the velocity that is reduced or increased is not fixed; it depends on the angle the pole is pointing. This is because the center of gravity of the pole increases the amount of energy needed to move the cart underneath it
+        0	Turn the cooler on
+        1	Turn the heater on
 
     Reward:
         Reward is 1 for every step taken, including the termination step
 
     Starting State:
-        All observations are assigned a uniform random value in [-0.05..0.05]
+        All observations are assigned a uniform random value in [10..20]
 
     Episode Termination:
-        Pole Angle is more than 12 degrees
-        Cart Position is more than 2.4 (center of the cart reaches the edge of the display)
+        Temperature Basement is less than 10 or more than 30
+        Temperature Main Floor is less than 10 or more than 30
+        Temperature Attic is less than 10 or more than 30
         Episode length is greater than 200
         Solved Requirements
         Considered solved when the average reward is greater than or equal to 195.0 over 100 consecutive trials.
