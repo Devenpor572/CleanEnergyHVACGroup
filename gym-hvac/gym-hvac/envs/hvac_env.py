@@ -10,6 +10,8 @@ from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
 
+from collections import namedtuple
+
 
 class HVACEnv(gym.Env):
     """
@@ -30,12 +32,13 @@ class HVACEnv(gym.Env):
         2	Temperature Attic           10          30
 
     "30 is hot, 20 is pleasing, 10 is cold, 0 is freezing"
-    20 Celsius (68 F) is roughly room temperature, so 30 and 10 make convenient hot/cold thresholds
+    20 Celsius (68 F) is roughly room temperature, and 30 and 10 make convenient hot/cold thresholds.
 
     Actions:
         Type: Discrete(2)
         Num	Action
-        0	Turn the cooler on
+        -1	Turn the cooler on
+        0   Turn everything off
         1	Turn the heater on
 
     Reward:
@@ -58,30 +61,108 @@ class HVACEnv(gym.Env):
         'video.frames_per_second': 50
     }
 
+    # k - The cooling constant of the boundary
+    # t - Function to get the temperature of the other side of the boundary
+    # w - The weight of the boundary. Can be used to give relative size of boundary
+    Boundary = namedtuple('Boundary', ['k', 't', 'w'])
+
+    class Room(object):
+        def __init__(self, boundary_list=None, hvac=None):
+            self.boundary_list = boundary_list
+            self.hvac = hvac
+
+        def get_temp_change_eq(self):
+            def temp_change_eq(current_temp, action):
+                return sum([boundary.k * boundary.w * (current_temp - boundary.t())
+                            for boundary in self.boundary_list]) \
+                       + (self.hvac(action) if self.hvac is not None else 0)
+            return temp_change_eq
+
+    @staticmethod
+    # TODO FIND AN ACCEPTABLE VALUE FOR THIS CONSTANT
+    def get_hvac(action):
+        return action * 5
+
+    @staticmethod
+    def temperature_ground(time):
+        # Very rough estimate, but the ground temperature appears to be about 10 on average
+        return 10
+
+    @staticmethod
+    def temperature_air(time):
+        # This could be where weather data could come in.
+        # For now just use 0 (or 40)
+        return 0
+
     def __init__(self):
-        self.gravity = 9.8
-        self.masscart = 1.0
-        self.masspole = 0.1
-        self.total_mass = (self.masspole + self.masscart)
-        self.length = 0.5  # actually half the pole's length
-        self.polemass_length = (self.masspole * self.length)
-        self.force_mag = 10.0
-        self.tau = 0.02  # seconds between state updates
-        self.kinematics_integrator = 'euler'
+        def get_temperature_basement():
+            return self.state[0]
 
-        # Angle at which to fail the episode
-        self.theta_threshold_radians = 12 * 2 * math.pi / 360
-        self.x_threshold = 2.4
+        def get_temperature_main():
+            return self.state[1]
 
-        # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
-        high = np.array([
-            self.x_threshold * 2,
-            np.finfo(np.float32).max,
-            self.theta_threshold_radians * 2,
-            np.finfo(np.float32).max])
+        def get_temperature_attic():
+            return self.state[2]
 
-        self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(-high, high, dtype=np.float32)
+        self.basement = HVACEnv.Room(boundary_list=[
+            # Basement-Earth Boundary
+            # k is roughly = 0.25/hr,
+            # The weight is a cube where 5 of the 6 sides are below ground)
+            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_ground, (5/6)),
+            # Basement-Main Boundary
+            # k is roughly = 0.5/hr,
+            # The weight is a cube where 1 of the 6 sides is touching the main level)
+            HVACEnv.Boundary(0.0001389, get_temperature_main, (1/6))
+        ])
+
+        self.main = HVACEnv.Room(boundary_list=[
+            # Main-Basement Boundary
+            # k is roughly = 0.5/hr,
+            # The weight is a cube where 1 of the 6 sides is touching the main level)
+            HVACEnv.Boundary(0.0001389, get_temperature_basement, (1 / 6)),
+            # Basement-Earth Boundary
+            # k is roughly = 0.25/hr,
+            # The weight is a cube where 4 of the 6 sides are below ground)
+            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_air, (4 / 6)),
+            # Main-Attic Boundary
+            # k is roughly = 0.5/hr,
+            # The weight is a cube where 1 of the 6 sides is touching the main level)
+            HVACEnv.Boundary(0.0001389, get_temperature_attic, (1 / 6))
+        ], )
+
+        self.attic = HVACEnv.Room(boundary_list=[
+            # Main-Attic Boundary
+            # k is roughly = 0.5/hr,
+            # The weight is a cube where 1 of the 6 sides is touching the main level)
+            HVACEnv.Boundary(0.0001389, get_temperature_main, (1 / 6)),
+            # Basement-Earth Boundary
+            # k is roughly = 0.25/hr,
+            # The weight is a cube where 5 of the 6 sides are below ground)
+            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_air, (5 / 6))
+        ])
+
+        # Thresholds at which to fail the episode
+        self.desired_tempertaure_low = 20
+        self.desired_tempertaure_high = 23
+        self.lower_temperature_threshold = 10
+        self.upper_temperature_threshold = 33
+
+        '''
+        Action Space
+            -1	Turn the cooler on
+            0  Turn everything off
+            1	Turn the heater on
+        '''
+        self.action_space = spaces.Tuple((-1, 0, 1))
+
+        '''
+        Observation Space
+            10  Lowest Acceptable Temperature
+            30  Highest Acceptable Temperature
+        '''
+        self.observation_space = spaces.Box(self.lower_temperature_threshold,
+                                            self.upper_temperature_threshold,
+                                            dtype=np.float32)
 
         self.seed()
         self.viewer = None
@@ -93,40 +174,61 @@ class HVACEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    # Calculate reward using this continuous function
+    # y = -0.8165 * sqrt(abs(x - 21.5)) + 1
+    # This function was chosen/created because at room temperature (21.5 celsius) it gives a reward of +1,
+    # at the thresholds of comfort (roughly 20 to 23 celsius) it returns 0,
+    # and around the minimum and maximum threshold (10 and 33 celsius) it returns roughly -1.75, which isn't too extreme
+    # In the range 20-23 just use reward 1.
+    @staticmethod
+    def calculate_temperature_reward(state):
+        reward = 0
+        for temperature in state:
+            if 20 <= state <= 23:
+                reward += 1
+            else:
+                reward += -0.8165 * math.sqrt(abs(temperature - 21.5)) + 1
+        return reward
+
+    @staticmethod
+    def calculate_action_cost(action):
+        return -1 if action != 0 else 0
+
+    # The weights 0.75 and 0.25 are arbitrary, but we probably don't want the learner to gain too much from no action
+    @staticmethod
+    def calculate_reward(state, action):
+        return 0.75 * HVACEnv.calculate_temperature_reward(state) + 0.25 * HVACEnv.calculate_action_cost(action)
+
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
         state = self.state
-        x, x_dot, theta, theta_dot = state
-        force = self.force_mag if action == 1 else -self.force_mag
-        costheta = math.cos(theta)
-        sintheta = math.sin(theta)
-        temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
-        thetaacc = (self.gravity * sintheta - costheta * temp) / (
-                    self.length * (4.0 / 3.0 - self.masspole * costheta * costheta / self.total_mass))
-        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
-        if self.kinematics_integrator == 'euler':
-            x = x + self.tau * x_dot
-            x_dot = x_dot + self.tau * xacc
-            theta = theta + self.tau * theta_dot
-            theta_dot = theta_dot + self.tau * thetaacc
-        else:  # semi-implicit euler
-            x_dot = x_dot + self.tau * xacc
-            x = x + self.tau * x_dot
-            theta_dot = theta_dot + self.tau * thetaacc
-            theta = theta + self.tau * theta_dot
-        self.state = (x, x_dot, theta, theta_dot)
-        done = x < -self.x_threshold \
-               or x > self.x_threshold \
-               or theta < -self.theta_threshold_radians \
-               or theta > self.theta_threshold_radians
+        basement_temp, main_temp, attic_temp = state
+
+        # Basement
+        basement_temp_change_equation = self.basement.get_temp_change_eq()
+        new_basement_temp = basement_temp_change_equation(basement_temp, action) + basement_temp
+
+        # Main
+        main_temp_change_equation = self.main.get_temp_change_eq()
+        new_main_temp = main_temp_change_equation(main_temp, action) + main_temp
+
+        # Attic
+        attic_temp_change_equation = self.attic.get_temp_change_eq()
+        new_attic_temp = attic_temp_change_equation(attic_temp, action) + attic_temp
+
+        # Calculate done
+        self.state = (new_basement_temp, new_main_temp, new_attic_temp)
+        done = self.lower_temperature_threshold > new_basement_temp > self.upper_temperature_threshold \
+            or self.lower_temperature_threshold > new_main_temp > self.upper_temperature_threshold \
+            or self.lower_temperature_threshold > new_attic_temp > self.upper_temperature_threshold
         done = bool(done)
 
         if not done:
-            reward = 1.0
+            reward = HVACEnv.calculate_reward(state, action)
         elif self.steps_beyond_done is None:
-            # Pole just fell!
+            # Episode just ended!
             self.steps_beyond_done = 0
-            reward = 1.0
+            reward = HVACEnv.calculate_reward(state, action)
         else:
             if self.steps_beyond_done == 0:
                 logger.warn(
@@ -137,7 +239,7 @@ class HVACEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        self.state = self.np_random.uniform(low=10, high=30, size=(3,))
         self.steps_beyond_done = None
         return np.array(self.state)
 
