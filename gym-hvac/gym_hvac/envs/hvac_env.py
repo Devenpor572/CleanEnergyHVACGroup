@@ -37,9 +37,9 @@ class HVACEnv(gym.Env):
     Actions:
         Type: Discrete(2)
         Num	Action
-        -1	Turn the cooler on
-        0   Turn everything off
-        1	Turn the heater on
+        0	Turn the cooler on
+        1   Turn everything off
+        2	Turn the heater on
 
     Reward:
         Reward is 1 for every step taken, including the termination step
@@ -81,7 +81,7 @@ class HVACEnv(gym.Env):
     @staticmethod
     # TODO FIND AN ACCEPTABLE VALUE FOR THIS CONSTANT
     def get_hvac(action):
-        return action * 5
+        return (action - 1) * 5
 
     @staticmethod
     def temperature_ground(time):
@@ -149,11 +149,11 @@ class HVACEnv(gym.Env):
 
         '''
         Action Space
-            -1	Turn the cooler on
-            0  Turn everything off
-            1	Turn the heater on
+            0	Turn the cooler on
+            1  Turn everything off
+            2	Turn the heater on
         '''
-        self.action_space = spaces.Tuple((-1, 0, 1))
+        self.action_space = spaces.Discrete(3)
 
         '''
         Observation Space
@@ -192,7 +192,7 @@ class HVACEnv(gym.Env):
 
     @staticmethod
     def calculate_action_cost(action):
-        return -1 if action != 0 else 0
+        return -1 if action != 1 else 0
 
     # The weights 0.75 and 0.25 are arbitrary, but we probably don't want the learner to gain too much from no action
     @staticmethod
