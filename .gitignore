@@ -1,5 +1,4 @@
 /.idea
-/cartpole
 *.egg-info
 /gym_environment_cookie
 *__pycache__*
