@@ -25,11 +25,14 @@ class HVACEnv(gym.Env):
         http://www.sharetechnote.com/html/DE_Modeling_Example_Cooling.html
 
     Observation:
-        Type: Box(3)
+        Type: Box(5)
         Num	Observation                 Min         Max
-        0	Temperature Basement        10          30
-        1	Temperature Main Floor      10          30
-        2	Temperature Attic           10          30
+        0	Temperature Air             -273        Inf
+        1	Temperature Ground          -273        Inf
+        2	Temperature HVAC            -273        Inf
+        3	Temperature Basement        0           40
+        4	Temperature Main Floor      0           40
+        5	Temperature Attic           0           40
 
     "30 is hot, 20 is pleasing, 10 is cold, 0 is freezing"
     20 Celsius (68 F) is roughly room temperature, and 30 and 10 make convenient hot/cold thresholds.
@@ -72,8 +75,8 @@ class HVACEnv(gym.Env):
             self.hvac = hvac
 
         def get_temp_change_eq(self):
-            def temp_change_eq(current_temp, action):
-                return sum([boundary.k * boundary.w * (current_temp - boundary.t())
+            def temp_change_eq(time, current_temp, action):
+                return sum([boundary.k * boundary.w * (current_temp - boundary.t(time))
                             for boundary in self.boundary_list]) \
                        + (self.hvac(action) if self.hvac is not None else 0)
             return temp_change_eq
@@ -95,13 +98,13 @@ class HVACEnv(gym.Env):
         return 0
 
     def __init__(self):
-        def get_temperature_basement():
+        def get_temperature_basement(time):
             return self.state[0]
 
-        def get_temperature_main():
+        def get_temperature_main(time):
             return self.state[1]
 
-        def get_temperature_attic():
+        def get_temperature_attic(time):
             return self.state[2]
 
         self.basement = HVACEnv.Room(boundary_list=[
@@ -148,21 +151,43 @@ class HVACEnv(gym.Env):
         self.upper_temperature_threshold = 33
 
         '''
-        Action Space
+        Action space
+            Num	Action
             0	Turn the cooler on
-            1  Turn everything off
+            1   No action
             2	Turn the heater on
         '''
         self.action_space = spaces.Discrete(3)
 
         '''
         Observation Space
-            10  Lowest Acceptable Temperature
-            30  Highest Acceptable Temperature
+            Num	Observation                 Min         Max
+            0	Temperature Air             -273        Inf
+            1	Temperature Ground          -273        Inf
+            2	Temperature HVAC            -273        Inf
+            3	Temperature Basement        0           40
+            4	Temperature Main Floor      0           40
+            5	Temperature Attic           0           40
         '''
-        self.observation_space = spaces.Box(self.lower_temperature_threshold,
-                                            self.upper_temperature_threshold,
-                                            dtype=np.float32)
+        low = np.array([
+            -273,
+            -273,
+            -273,
+            0,
+            0,
+            0])
+
+        high = np.array([
+            np.finfo(np.float32).max,
+            np.finfo(np.float32).max,
+            np.finfo(np.float32).max,
+            40,
+            40,
+            40])
+
+        self.time = 0
+
+        self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
         self.seed()
         self.viewer = None
@@ -183,8 +208,8 @@ class HVACEnv(gym.Env):
     @staticmethod
     def calculate_temperature_reward(state):
         reward = 0
-        for temperature in state:
-            if 20 <= state <= 23:
+        for temperature in state.tolist()[3:]:
+            if 20 <= temperature <= 23:
                 reward += 1
             else:
                 reward += -0.8165 * math.sqrt(abs(temperature - 21.5)) + 1
@@ -202,22 +227,28 @@ class HVACEnv(gym.Env):
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
         state = self.state
-        basement_temp, main_temp, attic_temp = state
+        air_temp, ground_temp, hvac_temp, basement_temp, main_temp, attic_temp = state
 
         # Basement
         basement_temp_change_equation = self.basement.get_temp_change_eq()
-        new_basement_temp = basement_temp_change_equation(basement_temp, action) + basement_temp
+        new_basement_temp = basement_temp_change_equation(self.time, basement_temp, action) + basement_temp
 
         # Main
         main_temp_change_equation = self.main.get_temp_change_eq()
-        new_main_temp = main_temp_change_equation(main_temp, action) + main_temp
+        new_main_temp = main_temp_change_equation(self.time, main_temp, action) + main_temp
 
         # Attic
         attic_temp_change_equation = self.attic.get_temp_change_eq()
-        new_attic_temp = attic_temp_change_equation(attic_temp, action) + attic_temp
+        new_attic_temp = attic_temp_change_equation(self.time, attic_temp, action) + attic_temp
 
         # Calculate done
-        self.state = (new_basement_temp, new_main_temp, new_attic_temp)
+        self.state = (self.temperature_air(self.time),
+                      self.temperature_ground(self.time),
+                      HVACEnv.get_hvac(action),
+                      new_basement_temp,
+                      new_main_temp,
+                      new_attic_temp)
+
         done = self.lower_temperature_threshold > new_basement_temp > self.upper_temperature_threshold \
             or self.lower_temperature_threshold > new_main_temp > self.upper_temperature_threshold \
             or self.lower_temperature_threshold > new_attic_temp > self.upper_temperature_threshold
@@ -236,10 +267,15 @@ class HVACEnv(gym.Env):
             self.steps_beyond_done += 1
             reward = 0.0
 
+        self.time += 1
+
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = self.np_random.uniform(low=10, high=30, size=(3,))
+        self.state = np.concatenate((np.array([self.temperature_air(0),
+                                               self.temperature_ground(0),
+                                               0]),
+                                     self.np_random.uniform(low=10, high=30, size=(3,))), axis=0)
         self.steps_beyond_done = None
         return np.array(self.state)
 
