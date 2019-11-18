@@ -157,8 +157,9 @@ class HVACEnv(gym.Env):
         ])
 
         # Thresholds at which to fail the episode
-        self.desired_tempertaure_low = 20
-        self.desired_tempertaure_high = 23
+        self.desired_temperature_low = 20
+        self.desired_temperature_mean = 21.5
+        self.desired_temperature_high = 23
         self.lower_temperature_threshold = 10
         self.upper_temperature_threshold = 33
 
@@ -220,24 +221,21 @@ class HVACEnv(gym.Env):
     # at the thresholds of comfort (roughly 20 to 23 celsius) it returns 0,
     # and around the minimum and maximum threshold (10 and 33 celsius) it returns roughly -1.75, which isn't too extreme
     # In the range 20-23 just use reward 1.
-    @staticmethod
-    def calculate_temperature_reward(state):
+    def calculate_temperature_reward(self, state):
         reward = 0
         for temperature in state[3:]:
-            if 20 <= temperature <= 23:
+            if self.desired_temperature_low <= temperature <= self.desired_temperature_high:
                 reward += 1
             else:
-                reward += -0.8165 * math.sqrt(abs(temperature - 21.5)) + 1
+                reward += -0.8165 * math.sqrt(abs(temperature - self.desired_temperature_mean)) + 1
         return reward
 
-    @staticmethod
-    def calculate_action_cost(action):
+    def calculate_action_cost(self, action):
         return -1 if action != 1 else 0
 
     # The weights 0.75 and 0.25 are arbitrary, but we probably don't want the learner to gain too much from no action
-    @staticmethod
-    def calculate_reward(state, action):
-        return 0.75 * HVACEnv.calculate_temperature_reward(state) + 0.25 * HVACEnv.calculate_action_cost(action)
+    def calculate_reward(self, state, action):
+        return 0.75 * self.calculate_temperature_reward(state) + 0.25 * self.calculate_action_cost(action)
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
@@ -275,11 +273,11 @@ class HVACEnv(gym.Env):
                     or done_attic_lower or done_attic_upper)
 
         if not done:
-            reward = HVACEnv.calculate_reward(state, action)
+            reward = self.calculate_reward(state, action)
         elif self.steps_beyond_done is None:
             # Episode just ended!
             self.steps_beyond_done = 0
-            reward = HVACEnv.calculate_reward(state, action)
+            reward = self.calculate_reward(state, action)
         else:
             if self.steps_beyond_done == 0:
                 logger.warn(

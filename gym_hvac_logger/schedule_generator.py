@@ -80,8 +80,8 @@ def main(argv):
     parser.add_argument('--desired_temperature_low', type=float, default=20)
     parser.add_argument('--desired_temperature_mean', type=float, default=21.5)
     parser.add_argument('--desired_temperature_high', type=float, default=23)
-    parser.add_argument('--lower_temperature_threshold', type=float, default=10)
-    parser.add_argument('--upper_temperature_threshold', type=float, default=33)
+    parser.add_argument('--lower_temperature_threshold', type=float, default=-1000)
+    parser.add_argument('--upper_temperature_threshold', type=float, default=1000)
     parser.add_argument('--ground_temperature', type=float, default=10)
     parser.add_argument('--air_temperature', type=float, default=0)
     # Roughly 1 degree every five minutes
