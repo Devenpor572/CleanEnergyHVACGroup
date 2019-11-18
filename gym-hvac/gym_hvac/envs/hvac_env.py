@@ -83,7 +83,9 @@ class HVACEnv(gym.Env):
 
     # TODO FIND AN ACCEPTABLE VALUE FOR THIS CONSTANT
     def get_hvac(self, action):
-        return (action - 1) * self.hvac_temperature * self.tau
+        heat_added = (action - 1) * self.hvac_temperature * self.tau
+        self.total_heat_added += heat_added
+        return heat_added
 
     def get_ground_temperature(self, time):
         # Very rough estimate, but the ground temperature appears to be about 10 on average
@@ -99,6 +101,7 @@ class HVACEnv(gym.Env):
         self.air_temperature = 0
         # Roughly 1 degree every five minutes
         self.hvac_temperature = 0.00333
+        self.total_heat_added = 0
 
         def get_temperature_basement(time):
             return self.state[3]

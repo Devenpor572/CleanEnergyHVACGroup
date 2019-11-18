@@ -30,20 +30,20 @@ def main():
     with open('output/results.csv', 'w', newline='') as outfile:
         csv_writer = csv.writer(outfile)
         csv_writer.writerow(['time',
-                             'ground_temperature',
                              'air_temperature',
+                             'ground_temperature',
                              'hvac_temperature',
                              'basement_temperature',
                              'main_temperature',
                              'attic_temperature',
+                             'head_added',
                              'action',
-                             'hvac_temp',
                              'reward',
                              'terminal'])
 
         csv_writer.writerow([0] + 
                             hvac_env.state.tolist() +
-                            [1, 0, 0, False])
+                            [0, 1, 0, False])
 
     for action in data['action_schedule']:
         state_next, reward, terminal, info = hvac_env.step(action)
@@ -51,7 +51,7 @@ def main():
             csv_writer = csv.writer(outfile)
             csv_writer.writerow([hvac_env.time] +
                                 state_next.tolist() +
-                                [action, hvac_env.get_hvac(action), reward, terminal])
+                                [hvac_env.total_heat_added, action, reward, terminal])
         if terminal:
             break
 
