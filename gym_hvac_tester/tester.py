@@ -26,6 +26,7 @@ def simulator(input_filename, results_filename):
     hvac_env.desired_temperature_high = data['desired_temperature_high']
     hvac_env.lower_temperature_threshold = data['lower_temperature_threshold']
     hvac_env.upper_temperature_threshold = data['upper_temperature_threshold']
+    hvac_env.step_limit = data['step_limit']
     hvac_env.ground_temperature = data['ground_temperature']
     hvac_env.air_temperature = data['air_temperature']
     hvac_env.hvac_temperature = data['hvac_temperature']
@@ -42,7 +43,9 @@ def simulator(input_filename, results_filename):
     # Write initial state
     with open(results_filename, 'w', newline='') as outfile:
         csv_writer = csv.writer(outfile)
-        csv_writer.writerow(['time',
+        csv_writer.writerow(['episode',
+                             'step',
+                             'time',
                              'air_temperature',
                              'ground_temperature',
                              'hvac_temperature',
@@ -55,7 +58,7 @@ def simulator(input_filename, results_filename):
                              'total_reward',
                              'terminal'])
 
-        csv_writer.writerow([0] +
+        csv_writer.writerow([0, hvac_env.step, hvac_env.time] +
                             hvac_env.state.tolist() +
                             [0, 1, 0, 0, False])
 
@@ -63,7 +66,7 @@ def simulator(input_filename, results_filename):
         state_next, reward, terminal, info = hvac_env.step(int(action))
         with open(results_filename, 'a', newline='') as outfile:
             csv_writer = csv.writer(outfile)
-            csv_writer.writerow([hvac_env.time] +
+            csv_writer.writerow([0, hvac_env.step, hvac_env.time] +
                                 state_next.tolist() +
                                 [hvac_env.total_heat_added, int(action), reward, hvac_env.total_reward, terminal])
         if terminal:
@@ -137,8 +140,9 @@ def interface(argv):
     parser.add_argument('--desired_temperature_low', type=float, default=20)
     parser.add_argument('--desired_temperature_mean', type=float, default=21.5)
     parser.add_argument('--desired_temperature_high', type=float, default=23)
-    parser.add_argument('--lower_temperature_threshold', type=float, default=-1000)
-    parser.add_argument('--upper_temperature_threshold', type=float, default=1000)
+    parser.add_argument('--lower_temperature_threshold', type=float, default=10)
+    parser.add_argument('--upper_temperature_threshold', type=float, default=33)
+    parser.add_argument('--step_limit', type=int, default=250)
     parser.add_argument('--ground_temperature', type=float, default=10)
     parser.add_argument('--air_temperature', type=float, default=0)
     # Roughly 1 degree every five minutes
@@ -147,6 +151,8 @@ def interface(argv):
     parser.add_argument('--main_temperature', type=float, default=20)
     parser.add_argument('--attic_temperature', type=float, default=25)
     parser.add_argument('--tau', type=float, default=300)
+    parser.add_argument('--ylim_lower', type=float, default=-5)
+    parser.add_argument('--ylim_upper', type=float, default=40)
 
     args = parser.parse_args(argv)
     vargs = vars(args)
@@ -163,7 +169,7 @@ def interface(argv):
 def main(argv):
     vargs = interface(argv)
     simulator(vargs['schedule_file'], vargs['results_file'])
-    plotter.plotter(vargs['results_file'], vargs['image_file'])
+    plotter.plotter(0, vargs['results_file'], vargs['image_file'], (vargs['ylim_lower'], vargs['ylim_upper']))
 
 
 if __name__ == '__main__':

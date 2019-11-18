@@ -198,7 +198,8 @@ class HVACEnv(gym.Env):
             40,
             40,
             40])
-
+        self.step_count = 0
+        self.step_limit = 250
         self.time = 0
         # Tau is the time scale (seconds)
         # 900 is 15 minutes
@@ -269,9 +270,10 @@ class HVACEnv(gym.Env):
         done_main_upper = new_main_temp > self.upper_temperature_threshold
         done_attic_lower = new_attic_temp < self.lower_temperature_threshold
         done_attic_upper = new_attic_temp > self.upper_temperature_threshold
+        done_step_count_limit = self.step_count >= self.step_limit
         done = bool(done_basement_lower or done_basement_upper
                     or done_main_lower or done_main_upper
-                    or done_attic_lower or done_attic_upper)
+                    or done_attic_lower or done_attic_upper or done_step_count_limit)
 
         if not done:
             reward = self.calculate_reward(state, action)
@@ -285,7 +287,7 @@ class HVACEnv(gym.Env):
                     "You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
             self.steps_beyond_done += 1
             reward = 0.0
-
+        self.step_count += 1
         self.time += self.tau
         self.total_reward += reward
         return np.array(self.state), reward, done, {}
@@ -295,6 +297,7 @@ class HVACEnv(gym.Env):
                                                self.get_ground_temperature(0),
                                                0]),
                                      self.np_random.uniform(low=10, high=30, size=(3,))), axis=0)
+        self.step_count = 0
         self.time = 0
         self.steps_beyond_done = None
         return np.array(self.state)
