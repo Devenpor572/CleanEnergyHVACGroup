@@ -1,11 +1,12 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from datetime import datetime
+import argparse
+import sys
 
 
-def main():
-    df = pd.read_csv('output/results.csv')
+def plotter(results_filename, image_filename):
+    df = pd.read_csv(results_filename)
     x = ['time']
     y = ['ground_temperature',
          'air_temperature',
@@ -22,9 +23,18 @@ def main():
     ax = sns.lineplot(x='time', y='value', hue='variable', data=melted_df)
     ax.set(ylim=(-5, 40))
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-    plt.savefig('plots/' + datetime.today().strftime('%Y%m%d_%H%M%S.png'))
+    plt.savefig(image_filename)
     plt.show()
 
 
+def __main__(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('results_filename')
+    parser.add_argument('image_filename')
+    args = parser.parse_args(argv)
+    vargs = vars(args)
+    plotter(vargs['results_filename'], vargs['image_filename'])
+
+
 if __name__ == '__main__':
-    main()
+    __main__(sys.argv[1:])

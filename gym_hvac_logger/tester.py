@@ -4,38 +4,17 @@ from datetime import datetime
 import gym
 import gym_hvac
 import json
-import matplotlib.pyplot as plt
 import numpy as np
 import os
-import pandas as pd
-import seaborn as sns
 import sys
 import re
 
-
-def plotter(results_filename, image_filename):
-    df = pd.read_csv(results_filename)
-    x = ['time']
-    y = ['ground_temperature',
-         'air_temperature',
-         'hvac_temperature',
-         'head_added',
-         'basement_temperature',
-         'main_temperature',
-         'attic_temperature',
-         'reward']
-    selected_df = df[x + y]
-    melted_df = pd.melt(selected_df, id_vars=x, value_vars=y)
-    sns.set(style="darkgrid")
-    plt.figure(num=None, figsize=(10, 6), dpi=80, facecolor='w', edgecolor='k')
-    ax = sns.lineplot(x='time', y='value', hue='variable', data=melted_df)
-    ax.set(ylim=(-5, 40))
-    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-    plt.savefig(image_filename)
-    plt.show()
+import plotter
 
 
-def logger(input_filename, results_filename):
+# HVAC Environment simulator
+# Runs the environment and logs the results to a csv file
+def simulator(input_filename, results_filename):
     with open(input_filename, 'r') as infile:
         data = json.load(infile)
         data['action_schedule'] = data['action_schedule'].replace('-', '0').replace('.', '1').replace('+', '2')
@@ -90,6 +69,8 @@ def logger(input_filename, results_filename):
             break
 
 
+# Run-Length Encoding Decoder
+# This encoder handles nested groups using parenthesis allowing for repeated patterns
 def decode(rle_str):
     mutable_rle_str = rle_str
     decoded_str = ''
@@ -167,24 +148,22 @@ def interface(argv):
     parser.add_argument('--tau', type=float, default=300)
 
     args = parser.parse_args(argv)
-    data = vars(args)
-    data['action_schedule'] = decode(data['action_schedule'])
-    os.makedirs(os.path.join('output', data['file']))
-    data['schedule_file'] = os.path.join('output', data['file'], 'schedule.json')
-    data['results_file'] = os.path.join('output', data['file'], 'results.csv')
-    data['image_file'] = os.path.join('output', data['file'], 'plot.png')
-    with open(data['schedule_file'], 'w') as outfile:
-        json.dump(data, outfile)
-    return data
+    vargs = vars(args)
+    vargs['action_schedule'] = decode(vargs['action_schedule'])
+    os.makedirs(os.path.join('output', vargs['file']))
+    vargs['schedule_file'] = os.path.join('output', vargs['file'], 'schedule.json')
+    vargs['results_file'] = os.path.join('output', vargs['file'], 'results.csv')
+    vargs['image_file'] = os.path.join('output', vargs['file'], 'plot.png')
+    with open(vargs['schedule_file'], 'w') as outfile:
+        json.dump(vargs, outfile)
+    return vargs
 
 
 def main(argv):
-    data = interface(argv)
-    logger(data['schedule_file'], data['results_file'])
-    plotter(data['results_file'], data['image_file'])
+    vargs = interface(argv)
+    simulator(vargs['schedule_file'], vargs['results_file'])
+    plotter.plotter(vargs['results_file'], vargs['image_file'])
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
