@@ -157,10 +157,11 @@ def interface(argv):
     args = parser.parse_args(argv)
     vargs = vars(args)
     vargs['action_schedule'] = decode(vargs['action_schedule'])
-    os.makedirs(os.path.join('output', vargs['file']))
-    vargs['schedule_file'] = os.path.join('output', vargs['file'], 'schedule.json')
-    vargs['results_file'] = os.path.join('output', vargs['file'], 'results.csv')
-    vargs['image_file'] = os.path.join('output', vargs['file'], 'plot.png')
+    vargs['file'] = os.path.join('output', vargs['file'])
+    os.makedirs(vargs['file'])
+    vargs['schedule_file'] = os.path.join(vargs['file'], 'schedule.json')
+    vargs['results_file'] = os.path.join(vargs['file'], 'results.csv')
+    vargs['image_file'] = os.path.join(vargs['file'], 'plot.png')
     with open(vargs['schedule_file'], 'w') as outfile:
         json.dump(vargs, outfile)
     return vargs
@@ -169,7 +170,7 @@ def interface(argv):
 def main(argv):
     vargs = interface(argv)
     simulator(vargs['schedule_file'], vargs['results_file'])
-    plotter.plotter(0, vargs['results_file'], vargs['image_file'], (vargs['ylim_lower'], vargs['ylim_upper']))
+    plotter.plotter(0, vargs['results_file'], vargs['file'], (vargs['ylim_lower'], vargs['ylim_upper']))
 
 
 if __name__ == '__main__':
