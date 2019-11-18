@@ -52,11 +52,12 @@ def simulator(input_filename, results_filename):
                              'head_added',
                              'action',
                              'reward',
+                             'total_reward',
                              'terminal'])
 
         csv_writer.writerow([0] +
                             hvac_env.state.tolist() +
-                            [0, 1, 0, False])
+                            [0, 1, 0, 0, False])
 
     for action in data['action_schedule']:
         state_next, reward, terminal, info = hvac_env.step(int(action))
@@ -64,7 +65,7 @@ def simulator(input_filename, results_filename):
             csv_writer = csv.writer(outfile)
             csv_writer.writerow([hvac_env.time] +
                                 state_next.tolist() +
-                                [hvac_env.total_heat_added, int(action), reward, terminal])
+                                [hvac_env.total_heat_added, int(action), reward, hvac_env.total_reward, terminal])
         if terminal:
             break
 

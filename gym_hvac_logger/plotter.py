@@ -15,6 +15,7 @@ def plotter(results_filename, image_filename):
          'basement_temperature',
          'main_temperature',
          'attic_temperature',
+         'total_reward',
          'reward']
     selected_df = df[x + y]
     melted_df = pd.melt(selected_df, id_vars=x, value_vars=y)

@@ -102,6 +102,7 @@ class HVACEnv(gym.Env):
         # Roughly 1 degree every five minutes
         self.hvac_temperature = 0.00333
         self.total_heat_added = 0
+        self.total_reward = 0
 
         def get_temperature_basement(time):
             return self.state[3]
@@ -286,7 +287,7 @@ class HVACEnv(gym.Env):
             reward = 0.0
 
         self.time += self.tau
-
+        self.total_reward += reward
         return np.array(self.state), reward, done, {}
 
     def reset(self):
