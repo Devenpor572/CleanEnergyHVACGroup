@@ -12,7 +12,7 @@ def plotter(episode, results_filename, image_filename, ylim):
     y = ['ground_temperature',
          'air_temperature',
          'hvac_temperature',
-         'head_added',
+         'heat_added',
          'basement_temperature',
          'main_temperature',
          'attic_temperature',

@@ -52,7 +52,7 @@ def simulator(input_filename, results_filename):
                              'basement_temperature',
                              'main_temperature',
                              'attic_temperature',
-                             'head_added',
+                             'heat_added',
                              'action',
                              'reward',
                              'total_reward',
