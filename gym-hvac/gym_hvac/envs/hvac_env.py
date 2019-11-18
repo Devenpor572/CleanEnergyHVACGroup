@@ -76,28 +76,30 @@ class HVACEnv(gym.Env):
 
         def get_temp_change_eq(self):
             def temp_change_eq(time, tau, current_temp, action):
-                return sum([tau * boundary.k * boundary.w * (current_temp - boundary.t(time))
+                return sum([tau * boundary.k * boundary.w * (boundary.t(time) - current_temp)
                             for boundary in self.boundary_list]) \
                        + (self.hvac(action) if self.hvac is not None else 0)
             return temp_change_eq
 
-    @staticmethod
     # TODO FIND AN ACCEPTABLE VALUE FOR THIS CONSTANT
-    def get_hvac(action):
-        return (action - 1) * 5
+    def get_hvac(self, action):
+        return (action - 1) * self.hvac_temperature * self.tau
 
-    @staticmethod
-    def temperature_ground(time):
+    def get_ground_temperature(self, time):
         # Very rough estimate, but the ground temperature appears to be about 10 on average
-        return 10
+        return self.ground_temperature
 
-    @staticmethod
-    def temperature_air(time):
+    def get_air_temperature(self, time):
         # This could be where weather data could come in.
         # For now just use 0 (or 40)
-        return 0
+        return self.air_temperature
 
     def __init__(self):
+        self.ground_temperature = 10
+        self.air_temperature = 0
+        # Roughly 1 degree every five minutes
+        self.hvac_temperature = 0.00333
+
         def get_temperature_basement(time):
             return self.state[3]
 
@@ -111,44 +113,44 @@ class HVACEnv(gym.Env):
             # Basement-Earth Boundary
             # k is roughly = 0.25/hr,
             # k = 0.0000694/s
-            # The weight is a cube where 5 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_ground, (5/6)),
+            # The weight is a half cube where 5 of the 6 sides are below ground)
+            HVACEnv.Boundary(0.0000694, self.get_ground_temperature, (3 / 4)),
             # Basement-Main Boundary
-            # k is roughly = 0.5/hr,
-            # k = 0.0001389/s
-            # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0001389, get_temperature_main, (1/6))
+            # k is roughly = 4/hr,
+            # k = 0.001111/s
+            # The weight is a half cube where 1 of the 6 sides is touching the main level)
+            HVACEnv.Boundary(0.0011111, get_temperature_main, (1 / 4))
         ])
 
         self.main = HVACEnv.Room(boundary_list=[
             # Main-Basement Boundary
-            # k is roughly = 0.5/hr,
-            # k = 0.0001389/s
+            # k is roughly = 4/hr,
+            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0001389, get_temperature_basement, (1 / 6)),
-            # Basement-Earth Boundary
+            HVACEnv.Boundary(0.0011111, get_temperature_basement, (1 / 4)),
+            # Main-Air Boundary
             # k is roughly = 0.25/hr,
             # k = 0.0000694/s
             # The weight is a cube where 4 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_air, (4 / 6)),
+            HVACEnv.Boundary(0.0000694, self.get_air_temperature, (1 / 2)),
             # Main-Attic Boundary
-            # k is roughly = 0.5/hr,
-            # k = 0.0001389/s
+            # k is roughly = 4/hr,
+            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0001389, get_temperature_attic, (1 / 6))
-        ], )
+            HVACEnv.Boundary(0.0011111, get_temperature_attic, (1 / 4))
+        ], hvac=self.get_hvac)
 
         self.attic = HVACEnv.Room(boundary_list=[
             # Main-Attic Boundary
-            # k is roughly = 0.5/hr,
-            # k = 0.0001389/s
+            # k is roughly = 4/hr,
+            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0001389, get_temperature_main, (1 / 6)),
-            # Basement-Earth Boundary
+            HVACEnv.Boundary(0.0011111, get_temperature_main, (1 / 4)),
+            # Attic-Air Boundary
             # k is roughly = 0.25/hr,
             # k = 0.0000694/s
             # The weight is a cube where 5 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, HVACEnv.temperature_air, (5 / 6))
+            HVACEnv.Boundary(0.0000694, self.get_air_temperature, (3 / 4))
         ])
 
         # Thresholds at which to fail the episode
@@ -251,18 +253,23 @@ class HVACEnv(gym.Env):
         attic_temp_change_equation = self.attic.get_temp_change_eq()
         new_attic_temp = attic_temp_change_equation(self.time, self.tau, attic_temp, action) + attic_temp
 
-        # Calculate done
-        self.state = (self.temperature_air(self.time),
-                      self.temperature_ground(self.time),
-                      HVACEnv.get_hvac(action),
+        self.state = (self.get_air_temperature(self.time),
+                      self.get_ground_temperature(self.time),
+                      self.get_hvac(action),
                       new_basement_temp,
                       new_main_temp,
                       new_attic_temp)
 
-        done = self.lower_temperature_threshold > new_basement_temp > self.upper_temperature_threshold \
-            or self.lower_temperature_threshold > new_main_temp > self.upper_temperature_threshold \
-            or self.lower_temperature_threshold > new_attic_temp > self.upper_temperature_threshold
-        done = bool(done)
+        # Calculate done - Separated for debugging
+        done_basement_lower = new_basement_temp < self.lower_temperature_threshold
+        done_basement_upper = new_basement_temp > self.upper_temperature_threshold
+        done_main_lower = new_main_temp < self.lower_temperature_threshold
+        done_main_upper = new_main_temp > self.upper_temperature_threshold
+        done_attic_lower = new_attic_temp < self.lower_temperature_threshold
+        done_attic_upper = new_attic_temp > self.upper_temperature_threshold
+        done = bool(done_basement_lower or done_basement_upper
+                    or done_main_lower or done_main_upper
+                    or done_attic_lower or done_attic_upper)
 
         if not done:
             reward = HVACEnv.calculate_reward(state, action)
@@ -282,10 +289,11 @@ class HVACEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.state = np.concatenate((np.array([self.temperature_air(0),
-                                               self.temperature_ground(0),
+        self.state = np.concatenate((np.array([self.get_air_temperature(0),
+                                               self.get_ground_temperature(0),
                                                0]),
                                      self.np_random.uniform(low=10, high=30, size=(3,))), axis=0)
+        self.time = 0
         self.steps_beyond_done = None
         return np.array(self.state)
 
