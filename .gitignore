@@ -3,3 +3,4 @@
 /gym_environment_cookie
 *__pycache__*
 gym_hvac_tester/output/*
+hvac_learner/output/results.csv
