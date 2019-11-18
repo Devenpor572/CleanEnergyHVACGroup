@@ -2,5 +2,4 @@
 *.egg-info
 /gym_environment_cookie
 *__pycache__*
-gym_hvac_logger/output/results.csv
-gym_hvac_logger/output/schedule.json
+gym_hvac_logger/output/*
