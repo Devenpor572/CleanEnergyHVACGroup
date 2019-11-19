@@ -32,17 +32,17 @@ def plotter(episode, results_filename, output_dir, ylim):
 
 def __main__(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument('output_dir')
     parser.add_argument('episode_upper', type=int)
     parser.add_argument('--episode_lower', type=int, default=0)
-    parser.add_argument('results_filename')
-    parser.add_argument('image_filename')
     parser.add_argument('--ylim_lower', type=float, default=-5)
     parser.add_argument('--ylim_upper', type=float, default=40)
     args = parser.parse_args(argv)
     vargs = vars(args)
     for episode in range(vargs['episode_lower'], vargs['episode_upper'] + 1):
         plotter(episode,
-                vargs['results_filename'],
+                os.path.join(vargs['output_dir'], 'results.csv'),
+                vargs['output_dir'],
                 (vargs['ylim_lower'], vargs['ylim_upper']))
 
 

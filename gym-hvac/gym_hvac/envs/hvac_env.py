@@ -199,11 +199,11 @@ class HVACEnv(gym.Env):
             40,
             40])
         self.step_count = 0
-        self.step_limit = 250
+        self.step_limit = 672
         self.time = 0
         # Tau is the time scale (seconds)
         # 900 is 15 minutes
-        self.tau = 300
+        self.tau = 900
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 

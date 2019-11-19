@@ -142,7 +142,7 @@ def interface(argv):
     parser.add_argument('--desired_temperature_high', type=float, default=23)
     parser.add_argument('--lower_temperature_threshold', type=float, default=10)
     parser.add_argument('--upper_temperature_threshold', type=float, default=33)
-    parser.add_argument('--step_limit', type=int, default=250)
+    parser.add_argument('--step_limit', type=int, default=672)
     parser.add_argument('--ground_temperature', type=float, default=10)
     parser.add_argument('--air_temperature', type=float, default=0)
     # Roughly 1 degree every five minutes
@@ -150,7 +150,7 @@ def interface(argv):
     parser.add_argument('--basement_temperature', type=float, default=15)
     parser.add_argument('--main_temperature', type=float, default=20)
     parser.add_argument('--attic_temperature', type=float, default=25)
-    parser.add_argument('--tau', type=float, default=300)
+    parser.add_argument('--tau', type=float, default=900)
     parser.add_argument('--ylim_lower', type=float, default=-5)
     parser.add_argument('--ylim_upper', type=float, default=40)
 
