@@ -88,7 +88,6 @@ def hvac():
         state = np.reshape(state, [1, observation_space])
         step = 0
         while True:
-            #env.render()
             action = dqn_solver.act(state)
             state_next, reward, terminal, info = env.step(action)
             with open('output/results.csv', 'a', newline='') as outfile:
