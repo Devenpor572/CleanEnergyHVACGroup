@@ -210,6 +210,8 @@ class HVACEnv(gym.Env):
         self.seed()
         self.viewer = None
         self.state = None
+        # Terminate upon reaching failure conditions
+        self.termination = True
 
         self.steps_beyond_done = None
 
@@ -271,9 +273,11 @@ class HVACEnv(gym.Env):
         done_attic_lower = new_attic_temp < self.lower_temperature_threshold
         done_attic_upper = new_attic_temp > self.upper_temperature_threshold
         done_step_count_limit = self.step_count >= self.step_limit
+
         done = bool(done_basement_lower or done_basement_upper
                     or done_main_lower or done_main_upper
-                    or done_attic_lower or done_attic_upper or done_step_count_limit)
+                    or done_attic_lower or done_attic_upper or done_step_count_limit) \
+            and self.termination
 
         if not done:
             reward = self.calculate_reward(state, action)

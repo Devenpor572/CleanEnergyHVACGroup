@@ -31,6 +31,7 @@ def simulator(input_filename, results_filename):
     hvac_env.air_temperature = data['air_temperature']
     hvac_env.hvac_temperature = data['hvac_temperature']
     hvac_env.tau = data['tau']
+    hvac_env.termination = data['termination']
 
     # Set the initial state
     hvac_env.state = np.array([hvac_env.get_air_temperature(0),
@@ -153,6 +154,7 @@ def interface(argv):
     parser.add_argument('--tau', type=float, default=900)
     parser.add_argument('--ylim_lower', type=float, default=-5)
     parser.add_argument('--ylim_upper', type=float, default=40)
+    parser.add_argument('--termination', action='store_true')
 
     args = parser.parse_args(argv)
     vargs = vars(args)
