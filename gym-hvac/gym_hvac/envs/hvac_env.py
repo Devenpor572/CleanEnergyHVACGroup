@@ -230,8 +230,11 @@ class HVACEnv(gym.Env):
         for temperature in state[3:]:
             if self.desired_temperature_low <= temperature <= self.desired_temperature_high:
                 reward += 1
+            elif temperature < self.desired_temperature_low:
+                reward += -0.8165 * math.sqrt(abs(temperature - self.desired_temperature_low)) + 1
+            # Temperature > desired temperature high
             else:
-                reward += -0.8165 * math.sqrt(abs(temperature - self.desired_temperature_mean)) + 1
+                reward += -0.8165 * math.sqrt(abs(temperature - self.desired_temperature_low)) + 1
         return reward
 
     def calculate_action_cost(self, action):
