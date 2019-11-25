@@ -303,6 +303,7 @@ class HVACEnv(gym.Env):
         self.time = 0
         self.total_heat_added = 0
         self.step_count = 0
+        self.total_reward = 0
         self.state = np.concatenate((np.array([self.get_air_temperature(0),
                                                self.get_ground_temperature(0),
                                                0]),

@@ -100,7 +100,8 @@ def hvac():
             dqn_solver.remember(state, action, reward, state_next, terminal)
             state = state_next
             if terminal:
-                print("Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
+                print("Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate)
+                      + ", score: " + str(step) + ', total reward: ' + str(env.total_reward))
                 break
             dqn_solver.experience_replay()
             step += 1
