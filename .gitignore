@@ -3,4 +3,5 @@
 /gym_environment_cookie
 *__pycache__*
 gym_hvac_tester/output/*
+gym_hvac_tester/temp/*
 hvac_learner/output/*
