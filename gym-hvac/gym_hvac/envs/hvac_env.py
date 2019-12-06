@@ -4,14 +4,84 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 """
 
-import math
+from collections import namedtuple
+import csv
+import configparser
+import datetime
 import gym
 from gym import spaces, logger
 from gym.utils import seeding
+import math
 import numpy as np
+import os
+import random
+import re
 
-from collections import namedtuple
 
+class WeatherGenerator(object):
+    def __init__(self, params, weather_filename=os.path.join(os.path.dirname(__file__),
+                                                             'resources/weather.csv')):
+        # WeatherGenerator.clean_weather_file(params, weather_filename)
+        self.weather = self.read_weather(params, weather_filename)
+        self.current_idx = None
+        self.reset()
+
+    def reset(self):
+        # Start at random time
+        self.current_idx = random.randint(0, len(self.weather) - 1)
+        return self.weather[self.current_idx]['datetime'], self.weather[self.current_idx]['temperature']
+
+    def step(self, current_time):
+        if self.current_idx >= len(self.weather) - 1:
+            return self.weather[self.current_idx]['temperature']
+        current_idx = self.current_idx
+        assert(current_time >= self.weather[current_idx]['datetime'])
+        while current_time > self.weather[current_idx + 1]['datetime']:
+            current_idx += 1
+        self.current_idx = current_idx
+        return self.weather[self.current_idx]['temperature']
+
+    @staticmethod
+    def read_weather(params, weather_filename):
+        weather = list()
+        with open(weather_filename) as weather_file:
+            for row in csv.DictReader(weather_file, skipinitialspace=True):
+                time_str = row[params['datetime_col']]
+                temperature_str = row[params['temperature_col']]
+                weather.append(
+                    {'datetime': datetime.datetime.strptime(time_str, params['datetime_format']),
+                     'temperature': float(temperature_str)})
+        return weather
+
+    @staticmethod
+    def clean_weather_file(params, weather_filename):
+        weather = list()
+        with open(weather_filename) as weather_file:
+            for row in csv.DictReader(weather_file, skipinitialspace=True):
+                time_str = row[params['datetime_col']]
+                temperature_str = row[params['temperature_col']]
+                if time_str and temperature_str:
+                    try:
+                        float(temperature_str)
+                    except ValueError:
+                        groups = re.search(r'\D*(-?\d+(?:\.\d+)?)\D*', temperature_str)
+                        if groups is None:
+                            continue
+                        else:
+                            temperature_str = groups[1]
+                    temperature = float(temperature_str)
+                    # Convert to celsius
+                    temperature = (temperature - 32) * (5/9)
+                    weather.append(
+                        {'datetime': datetime.datetime.strptime(time_str, params['datetime_format']),
+                         'temperature': temperature})
+        with open(os.path.join(os.path.dirname(__file__), 'resources/weather_cleaned.csv'), 'w',
+                  newline='') as weather_file:
+            weather_csv_writer = csv.DictWriter(weather_file, ['datetime', 'temperature'])
+            weather_csv_writer.writeheader()
+            for row in weather:
+                weather_csv_writer.writerow(row)
+        return weather
 
 class HVACEnv(gym.Env):
     """
@@ -97,12 +167,21 @@ class HVACEnv(gym.Env):
         return self.air_temperature
 
     def __init__(self):
-        self.ground_temperature = 10
-        self.air_temperature = 0
+        cfg = configparser.ConfigParser()
+        cfg.read(os.path.join(os.path.dirname(__file__), 'resources/env_config.ini'))
+
+        # initial_state
+        self.ground_temperature = float(cfg['initial_state'].get('ground_temperature', '10'))
         # Roughly 1 degree every five minutes
-        self.hvac_temperature = 0.00333
+        self.hvac_temperature = float(cfg['initial_state'].get('hvac_temperature', '10'))
+
+        self.weather_generator = WeatherGenerator(cfg['weather_params'],
+                                                  os.path.join(os.path.dirname(__file__),
+                                                               cfg['weather'].get('weather_file')))
+
         self.total_heat_added = 0
         self.total_reward = 0
+        self.air_temperature = 0
 
         def get_temperature_basement(time):
             return self.state[3]
