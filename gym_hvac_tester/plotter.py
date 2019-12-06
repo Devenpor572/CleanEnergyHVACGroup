@@ -64,7 +64,7 @@ def plotter(episode, results_filename, output_dir, argv=None):
     ax2.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     set_size(fig, (9.999, 10), dpi=100)
     plt.savefig(os.path.join(output_dir, '{:0>3}.png'.format(episode)), bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
 
 def parse_args(argv):
@@ -95,6 +95,7 @@ def __main__(argv):
     vargs = vars(args)
     arg_file_vargs = parse_config_file(vargs['config_file'])
     for episode in range(vargs['episode_lower'], vargs['episode_upper'] + 1):
+        print('Plotting episode {}'.format(episode))
         plotter(episode,
                 os.path.join(vargs['output_dir'], 'results.csv'),
                 vargs['output_dir'],

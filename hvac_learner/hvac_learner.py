@@ -85,6 +85,7 @@ def hvac():
 
     while True:
         state = env.reset()
+        start_time = env.time
         state = np.reshape(state, [1, observation_space])
         step = 0
         while True:
@@ -92,7 +93,7 @@ def hvac():
             state_next, reward, terminal, info = env.step(action)
             with open('output/results.csv', 'a', newline='') as outfile:
                 csv_writer = csv.writer(outfile)
-                csv_writer.writerow([run, step, env.time] +
+                csv_writer.writerow([run, step, (env.time - start_time).seconds] +
                                     state_next.tolist() +
                                     [env.total_heat_added, int(action), reward, env.total_reward, terminal])
             reward = reward if not terminal else -reward

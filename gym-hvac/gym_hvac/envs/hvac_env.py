@@ -26,6 +26,12 @@ class WeatherGenerator(object):
         self.current_idx = None
         self.reset()
 
+    def time(self):
+        return self.weather[self.current_idx]['datetime']
+
+    def temperature(self):
+        return self.weather[self.current_idx]['temperature']
+
     def reset(self):
         # Start at random time
         self.current_idx = random.randint(0, len(self.weather) - 1)
@@ -146,14 +152,14 @@ class HVACEnv(gym.Env):
 
         def get_temp_change_eq(self):
             def temp_change_eq(time, tau, current_temp, action):
-                return sum([tau * boundary.k * boundary.w * (boundary.t(time) - current_temp)
+                return sum([tau.seconds * boundary.k * boundary.w * (boundary.t(time) - current_temp)
                             for boundary in self.boundary_list]) \
                        + (self.hvac(action) if self.hvac is not None else 0)
             return temp_change_eq
 
     # TODO FIND AN ACCEPTABLE VALUE FOR THIS CONSTANT
     def get_hvac(self, action):
-        heat_added = (action - 1) * self.hvac_temperature * self.tau
+        heat_added = (action - 1) * self.hvac_temperature * self.tau.seconds
         self.total_heat_added += heat_added
         return heat_added
 
@@ -164,7 +170,7 @@ class HVACEnv(gym.Env):
     def get_air_temperature(self, time):
         # This could be where weather data could come in.
         # For now just use 0 (or 40)
-        return self.air_temperature
+        return self.weather_generator.step(time)
 
     def __init__(self):
         cfg = configparser.ConfigParser()
@@ -181,7 +187,7 @@ class HVACEnv(gym.Env):
 
         self.total_heat_added = 0
         self.total_reward = 0
-        self.air_temperature = 0
+        self.air_temperature = self.weather_generator.temperature()
 
         def get_temperature_basement(time):
             return self.state[3]
@@ -279,11 +285,11 @@ class HVACEnv(gym.Env):
             40])
         self.step_count = 0
         # 900 * 4* 24
-        self.step_limit = 96
-        self.time = 0
+        self.step_limit = int(cfg['params'].get('step_limit', '96'))
+        self.time = self.weather_generator.time()
+
         # Tau is the time scale (seconds)
-        # 900 is 15 minutes
-        self.tau = 900
+        self.tau = datetime.timedelta(seconds=int(cfg['params'].get('tau', '900')))
 
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
@@ -380,11 +386,12 @@ class HVACEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
-        self.time = 0
+        self.weather_generator.reset()
+        self.time = self.weather_generator.time()
         self.total_heat_added = 0
         self.step_count = 0
         self.total_reward = 0
-        self.state = np.concatenate((np.array([self.get_air_temperature(0),
+        self.state = np.concatenate((np.array([self.weather_generator.temperature(),
                                                self.get_ground_temperature(0),
                                                0]),
                                      self.np_random.uniform(low=10, high=30, size=(3,))), axis=0)
