@@ -93,7 +93,7 @@ def hvac():
             state_next, reward, terminal, info = env.step(action)
             with open('output/results.csv', 'a', newline='') as outfile:
                 csv_writer = csv.writer(outfile)
-                csv_writer.writerow([run, step, (env.time - start_time).seconds] +
+                csv_writer.writerow([run, step, (env.time - start_time).total_seconds()] +
                                     state_next.tolist() +
                                     [env.total_heat_added, int(action), reward, env.total_reward, terminal])
             reward = reward if not terminal else -reward
