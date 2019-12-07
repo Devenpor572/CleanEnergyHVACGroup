@@ -38,7 +38,7 @@ class WeatherGenerator(object):
         return self.weather[self.current_idx]['datetime'], self.weather[self.current_idx]['temperature']
 
     def step(self, current_time):
-        if self.current_idx >= len(self.weather) - 1:
+        if self.current_idx + 2 >= len(self.weather):
             return self.weather[self.current_idx]['temperature']
         current_idx = self.current_idx
         assert(current_time >= self.weather[current_idx]['datetime'])

@@ -65,6 +65,7 @@ def plotter(episode, results_filename, output_dir, argv=None):
     set_size(fig, (9.999, 10), dpi=100)
     plt.savefig(os.path.join(output_dir, '{:0>3}.png'.format(episode)), bbox_inches='tight')
     # plt.show()
+    plt.close()
 
 
 def parse_args(argv):
