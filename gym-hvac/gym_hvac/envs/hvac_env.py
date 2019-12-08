@@ -37,6 +37,12 @@ class WeatherGenerator(object):
         self.current_idx = random.randint(0, len(self.weather) - 1)
         return self.weather[self.current_idx]['datetime'], self.weather[self.current_idx]['temperature']
 
+    def set_idx_from_datetime(self, custom_datetime):
+        idx = 0
+        while custom_datetime > self.weather[idx]['datetime'] and idx < len(self.weather) - 1:
+            idx += 1
+        self.current_idx = idx
+
     def step(self, current_time):
         if self.current_idx + 2 >= len(self.weather):
             return self.weather[self.current_idx]['temperature']
@@ -198,48 +204,37 @@ class HVACEnv(gym.Env):
         def get_temperature_attic(time):
             return self.state[5]
 
+        k_insulated_boundary = float(cfg['initial_state'].get('insulated_boundary', '0.0000694'))
+        k_uninsulated_boundary = float(cfg['initial_state'].get('uninsulated_boundary', '0.0011111'))
+
         self.basement = HVACEnv.Room(boundary_list=[
             # Basement-Earth Boundary
-            # k is roughly = 0.25/hr,
-            # k = 0.0000694/s
             # The weight is a half cube where 5 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, self.get_ground_temperature, (3 / 4)),
+            HVACEnv.Boundary(k_insulated_boundary, self.get_ground_temperature, (3 / 4)),
             # Basement-Main Boundary
-            # k is roughly = 4/hr,
-            # k = 0.001111/s
             # The weight is a half cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0011111, get_temperature_main, (1 / 4))
+            HVACEnv.Boundary(k_uninsulated_boundary, get_temperature_main, (1 / 4))
         ])
 
         self.main = HVACEnv.Room(boundary_list=[
             # Main-Basement Boundary
-            # k is roughly = 4/hr,
-            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0011111, get_temperature_basement, (1 / 4)),
+            HVACEnv.Boundary(k_uninsulated_boundary, get_temperature_basement, (1 / 4)),
             # Main-Air Boundary
-            # k is roughly = 0.25/hr,
-            # k = 0.0000694/s
             # The weight is a cube where 4 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, self.get_air_temperature, (1 / 2)),
+            HVACEnv.Boundary(k_insulated_boundary, self.get_air_temperature, (1 / 2)),
             # Main-Attic Boundary
-            # k is roughly = 4/hr,
-            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0011111, get_temperature_attic, (1 / 4))
+            HVACEnv.Boundary(k_uninsulated_boundary, get_temperature_attic, (1 / 4))
         ], hvac=self.get_hvac)
 
         self.attic = HVACEnv.Room(boundary_list=[
             # Main-Attic Boundary
-            # k is roughly = 4/hr,
-            # k = 0.0011111/s
             # The weight is a cube where 1 of the 6 sides is touching the main level)
-            HVACEnv.Boundary(0.0011111, get_temperature_main, (1 / 4)),
+            HVACEnv.Boundary(k_uninsulated_boundary, get_temperature_main, (1 / 4)),
             # Attic-Air Boundary
-            # k is roughly = 0.25/hr,
-            # k = 0.0000694/s
             # The weight is a cube where 5 of the 6 sides are below ground)
-            HVACEnv.Boundary(0.0000694, self.get_air_temperature, (3 / 4))
+            HVACEnv.Boundary(k_insulated_boundary, self.get_air_temperature, (3 / 4))
         ])
 
         # Thresholds at which to fail the episode

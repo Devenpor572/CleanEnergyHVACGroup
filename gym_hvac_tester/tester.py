@@ -1,6 +1,6 @@
 import argparse
 import csv
-from datetime import datetime
+import datetime
 import gym
 import gym_hvac
 import json
@@ -9,7 +9,7 @@ import os
 import sys
 import re
 
-import plotter
+import model_plotter
 
 
 # HVAC Environment simulator
@@ -30,17 +30,19 @@ def simulator(input_filename, results_filename):
     hvac_env.ground_temperature = data['ground_temperature']
     hvac_env.air_temperature = data['air_temperature']
     hvac_env.hvac_temperature = data['hvac_temperature']
-    hvac_env.tau = data['tau']
+    hvac_env.tau = datetime.timedelta(seconds=data['tau'])
     hvac_env.termination = data['termination']
+    hvac_env.weather_generator.set_idx_from_datetime(datetime.datetime(2015, 1, 1))
+    hvac_env.time = hvac_env.weather_generator.time()
 
     # Set the initial state
-    hvac_env.state = np.array([hvac_env.get_air_temperature(0),
-                               hvac_env.get_ground_temperature(0),
+    hvac_env.state = np.array([hvac_env.get_air_temperature(hvac_env.time),
+                               hvac_env.get_ground_temperature(hvac_env.time),
                                0,
                                data['basement_temperature'],
                                data['main_temperature'],
                                data['attic_temperature']])
-
+    start_time = hvac_env.time
     # Write initial state
     with open(results_filename, 'w', newline='') as outfile:
         csv_writer = csv.writer(outfile)
@@ -58,8 +60,7 @@ def simulator(input_filename, results_filename):
                              'reward',
                              'total_reward',
                              'terminal'])
-
-        csv_writer.writerow([0, hvac_env.step, hvac_env.time] +
+        csv_writer.writerow([0, hvac_env.step_count, 0] +
                             hvac_env.state.tolist() +
                             [0, 1, 0, 0, False])
 
@@ -67,7 +68,7 @@ def simulator(input_filename, results_filename):
         state_next, reward, terminal, info = hvac_env.step(int(action))
         with open(results_filename, 'a', newline='') as outfile:
             csv_writer = csv.writer(outfile)
-            csv_writer.writerow([0, hvac_env.step, hvac_env.time] +
+            csv_writer.writerow([0, hvac_env.step_count, (hvac_env.time - start_time).total_seconds()] +
                                 state_next.tolist() +
                                 [hvac_env.total_heat_added, int(action), reward, hvac_env.total_reward, terminal])
         if terminal:
@@ -137,7 +138,7 @@ def decode(rle_str):
 def interface(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('action_schedule')
-    parser.add_argument('--file', default=datetime.today().strftime('%Y%m%d_%H%M%S'))
+    parser.add_argument('--file', default=datetime.datetime.today().strftime('%Y%m%d_%H%M%S'))
     parser.add_argument('--desired_temperature_low', type=float, default=20)
     parser.add_argument('--desired_temperature_mean', type=float, default=21.5)
     parser.add_argument('--desired_temperature_high', type=float, default=23)
@@ -172,7 +173,7 @@ def interface(argv):
 def main(argv):
     vargs = interface(argv)
     simulator(vargs['schedule_file'], vargs['results_file'])
-    plotter.plotter(0, vargs['results_file'], vargs['file'], (vargs['ylim_lower'], vargs['ylim_upper']))
+    model_plotter.plotter(0, vargs['results_file'], vargs['file'], {'xlim_left': 0, 'xlim_right': 604800})
 
 
 if __name__ == '__main__':
