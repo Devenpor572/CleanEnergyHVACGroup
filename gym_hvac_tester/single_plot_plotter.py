@@ -32,7 +32,7 @@ def set_size(fig, size, dpi=100, eps=1e-2, give_up=2, min_size_px=10):
             return False
 
 
-def plotter(episode, results_filename, output_dir, argv=None):
+def plotter(episode, title, results_filename, output_dir, argv=None):
     sns.set(style="darkgrid")
     df = pd.read_csv(results_filename)
     df = df[df['episode'] == episode]
@@ -55,7 +55,7 @@ def plotter(episode, results_filename, output_dir, argv=None):
     reward_df = pd.melt(df[x + y_reward], id_vars=x, value_vars=y_reward)
     # Create two subplots sharing y axis
     fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True, facecolor='w', edgecolor='k', figsize=(15, 7.5))
-    fig.suptitle('Mediocre Learner Controlling HVAC System Over a Week in the Winter')
+    fig.suptitle(title)
     sns.lineplot(x='time', y='value', hue='variable', data=temperature_df, ax=ax1)
     ax1.axhspan(20, 23, color='#36D7B7', alpha=0.5)
     # ax2.step(x='time', y='value', data=action_df)
@@ -69,10 +69,12 @@ def plotter(episode, results_filename, output_dir, argv=None):
         item.set_rotation(60)
     if argv is not None:
         ax1.set_xlim(argv['xlim_left'], argv['xlim_right'])
+        ax2.set_ylim(-5, 35)
         #ax1.set_ylim(argv['temp_ylim_lower'], argv['temp_ylim_upper'])
         ax2.set_xlim(argv['xlim_left'], argv['xlim_right'])
-        ax2.set_ylim(-1, 2)
+        ax2.set_ylim(-1, 4)
         ax3.set_xlim(argv['xlim_left'], argv['xlim_right'])
+        ax3.set_ylim(-20, 1000)
         #ax3.set_ylim(argv['reward_ylim_lower'], argv['reward_ylim_upper'])
     # ax1.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     ax2.legend().set_visible(False)
@@ -114,16 +116,14 @@ def __main__(argv):
     args = parser.parse_args(argv)
     vargs = vars(args)
     arg_file_vargs = parse_config_file(vargs['config_file'])
-    for episode in range(vargs['episode_lower'], vargs['episode_upper'] + 1):
-        # TODO DELETE THIS
-        episode = 247
+    for episode, title in [(157, 'Inexperienced Agent Controlling HVAC System Over a Week in the Winter'),
+                           (247, 'Experienced Agent Controlling HVAC System Over a Week in the Summer')]:
         print('Plotting episode {}'.format(episode))
         plotter(episode,
+                title,
                 os.path.join(vargs['output_dir'], 'results.csv'),
                 vargs['output_dir'],
                 arg_file_vargs)
-        #TODO DELETE THIS
-        break
 
 
 if __name__ == '__main__':
