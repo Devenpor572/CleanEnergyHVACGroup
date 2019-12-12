@@ -66,11 +66,29 @@ The reward function consists of two parts: the temperature reward and the action
  
 The temperature reward function is modeled using this image:
 
+![Image of Yaktocat](https://raw.githubusercontent.com/Devenpor572/CleanEnergyHVACGroup/master/resources/temperature_reward.png)
+
 This function was designed to model comfortable temperatures.
 
 The action cost is simply -1 if action is taken, 0 if no action is taken. This is to simulate the cost of turning on an HVAC unit in real life.
 
+## Learner
 
+The learner is found in `hvac_learner/hvac_learner.py`. The code for the learner largely came from this article:
+
+[Cartpole - Introduction to Reinforcement Learning](https://towardsdatascience.com/cartpole-introduction-to-reinforcement-learning-ed0eb5b58288)
+
+[Cartpole Learner Code](https://github.com/gsurma/cartpole)
+
+The learner logs its state to a CSV file every step. This in turn may be rendered to a plot.
+
+## Tester
+
+I created a test script `gym_hvac_tester/tester.py` to help fine tune the parameters of the model. It non-intelligently steps the model forward while following a sequence of actions specified using command line parameters. The action sequence is encoded using run-length encoding.
+
+## Plotters
+
+The plotters were created to create plots for the final presentation. They use pandas, seaborn, and Matplotlib to to plot temperature trends, as well as other trends.
 
 ### References
 
@@ -81,16 +99,7 @@ I used this article as a reference while generating the custom environment.
 
 
 
-[Cartpole - Introduction to Reinforcement Learning](https://towardsdatascience.com/cartpole-introduction-to-reinforcement-learning-ed0eb5b58288)
+
   
-
-
-
-## Usage Guide
-
-Resources I used for the custom OpenGym environment
  
-
-
-## Learner
 
