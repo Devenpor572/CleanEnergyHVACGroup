@@ -94,4 +94,4 @@ The plotters were created to create plots for the final presentation. They use p
 
 - [Making a custom environment in gym](https://medium.com/@apoddar573/making-your-own-custom-environment-in-gym-c3b65ff8cdaa)
 - [Cartpole - Introduction to Reinforcement Learning](https://towardsdatascience.com/cartpole-introduction-to-reinforcement-learning-ed0eb5b58288)
-- [Heating/Cooling Differential Equations(http://www.sharetechnote.com/html/DE_Modeling_Example_Cooling.html)
+- [Heating/Cooling Differential Equations](http://www.sharetechnote.com/html/DE_Modeling_Example_Cooling.html)
