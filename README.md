@@ -82,6 +82,8 @@ The learner is found in `hvac_learner/hvac_learner.py`. The code for the learner
 
 The learner logs its state to a CSV file every step. This in turn may be rendered to a plot.
 
+**I lowered the rate of exploration decay x100 to make the program more reliable. While it often finds the (near) global minimum before reaching the lower limit, it was unreliable.**
+
 ## Tester
 
 I created a test script `gym_hvac_tester/tester.py` to help fine tune the parameters of the model. It non-intelligently steps the model forward while following a sequence of actions specified using command line parameters. The action sequence is encoded using run-length encoding.
