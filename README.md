@@ -90,6 +90,18 @@ I created a test script `gym_hvac_tester/tester.py` to help fine tune the parame
 
 The plotters were created to create plots for the final presentation. They use pandas, seaborn, and Matplotlib to to plot temperature trends, as well as other trends.
 
+### FFMPEG Commands
+
+I used FFMPEG to convert the sequence of graphs into an animation.
+
+#### Convert images to video
+
+`ffmpeg -r 4 -f image2 -s 1920x1080 -i %03d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p output.mp4`
+
+#### Add frame number to x=20, y=20
+ 
+`ffmpeg -i input.mp4 -vf "drawtext=fontfile=Arial.ttf: text='%{frame_num}': start_number=1: x=20: y=20: fontcolor=black : fontsize=20: box=1: boxcolor=white: boxborderw=5" -c:a copy output.mp4`
+
 ## References
 
 - [Making a custom environment in gym](https://medium.com/@apoddar573/making-your-own-custom-environment-in-gym-c3b65ff8cdaa)
