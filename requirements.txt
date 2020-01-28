@@ -42,7 +42,7 @@ seaborn==0.9.0
 six==1.13.0
 tb-nightly==1.14.0a20190603
 tensorboard==1.14.0
-tensorflow==1.14.0
+tensorflow==1.15.2
 tensorflow-estimator==1.14.0
 termcolor==1.1.0
 tf-estimator-nightly==1.14.0.dev2019060501
