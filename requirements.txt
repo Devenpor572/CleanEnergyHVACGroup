@@ -2,7 +2,7 @@ absl-py==0.8.1
 arrow==0.15.4
 astor==0.8.0
 binaryornot==0.4.4
-certifi==2019.9.11
+certifi==2022.12.7
 chardet==3.0.4
 Click==7.0
 cloudpickle==1.2.2
